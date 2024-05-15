@@ -1,4 +1,5 @@
 import { VariantProps, cva } from "class-variance-authority";
+import { twMerge } from "tailwind-merge";
 import { For, createSignal } from "solid-js";
 import whitePawnImage from "./assets/pieces/wP.svg";
 import whiteKnightImage from "./assets/pieces/wP.svg";
@@ -27,17 +28,6 @@ enum Color {
     BLACK,
 }
 
-enum Rank {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-}
-
 type Piece = {
     kind: Kind;
     color: Color;
@@ -64,7 +54,7 @@ const App = () => {
 
     return (
         <main class="w-full p-12 flex justify-center">
-            <div class="relative w-full">
+            <div class="relative">
                 <Board class="absolute" />
                 <div class="top-0 left-0 absolute grid grid-cols-8 gap-0 w-max h-max rounded-lg overflow-hidden">
                     <For each={pieces()}>
@@ -80,7 +70,7 @@ const App = () => {
 
 const Board = (props: { class: string }) => {
     return (
-        <div class={props.class}>
+        <div class={twMerge(["grid grid-cols-8 w-max"], props.class)}>
             <For each={Array.from({ length: 64 }, () => 0)}>
                 {(_, i) => {
                     let offset = Math.floor(i() / 8) % 2 == 0 ? 0 : 1;
@@ -122,7 +112,13 @@ const VisualPiece = (props: PieceProps) => {
     }
 
     return (
-        <button class="w-20 bg-slate-200 aspect-square absolute top-0 left-0">
+        <button
+            class="w-20 bg-slate-200 aspect-square absolute"
+            style={{
+                top: (props.piece.rank * 80).toString() + "px",
+                left: (props.piece.file * 80).toString() + "px",
+            }}
+        >
             <img src={imagePath} alt="piece" width="80px" />
         </button>
     );
