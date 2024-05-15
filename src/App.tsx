@@ -58,50 +58,52 @@ function seedPieces(): Piece[] {
 
 const App = () => {
     const [pieces, setPieces] = createSignal<Piece[]>(seedPieces());
-    const [selected, setSelected] = createSignal<number | null>(null);
+    const [selected, setSelected] = createSignal<Piece | null>(null);
     const [currentTurn, setCurrentTurn] = createSignal<Color>(Color.WHITE);
     const [highlight, setHighlight] = createSignal<number[]>([]);
 
+    // Update highlights
     createEffect(() => {
-        const selectedIndex = selected();
+        const selectedPiece = selected();
 
         const newHighlight: number[] = [];
-        if (selectedIndex) {
-            newHighlight.push(selectedIndex);
+        if (selectedPiece) {
+            newHighlight.push(pieces().indexOf(selectedPiece));
         }
 
         setHighlight(newHighlight);
     });
 
     function handlePieceClicked(clickedIndex: number) {
-        console.log("piece clicked");
-        const selectedIndex = selected();
+        const selectedPiece = selected();
+        const clickedPiece = pieces()[clickedIndex];
 
         // Handle clicking piece for the first time
-        if (!selectedIndex) {
-            if (pieces()[clickedIndex].color === currentTurn()) {
-                setSelected(clickedIndex);
+        if (!selectedPiece) {
+            if (clickedPiece.color === currentTurn()) {
+                setSelected(clickedPiece);
             }
             return;
         }
 
         // Handle deselecting pieces
-        if (selectedIndex === clickedIndex) {
+        if (selectedPiece === clickedPiece) {
             setSelected(null);
             return;
         }
 
         // Handle clicking on a piece with another piece selected
-        if (selectedIndex) {
+        if (selectedPiece) {
             // Prevent capturing your own piece - instead select it
             if (pieces()[clickedIndex].color === currentTurn()) {
-                setSelected(clickedIndex);
+                setSelected(clickedPiece);
                 return;
             }
 
             // Move piece and capture enemy piece
             setPieces((prev) => {
                 const newPieces = [...prev];
+                const selectedIndex = newPieces.indexOf(selectedPiece);
 
                 const movedPiece = newPieces[selectedIndex];
                 const capturedPiece = newPieces[clickedIndex];
@@ -123,9 +125,9 @@ const App = () => {
     }
 
     function handleSquareClicked(index: number) {
-        const selectedIndex = selected();
+        const selectedPiece = selected();
 
-        if (!selectedIndex) {
+        if (!selectedPiece) {
             return;
         }
 
@@ -134,6 +136,7 @@ const App = () => {
 
         setPieces((prev) => {
             const updated = [...prev];
+            const selectedIndex = pieces().indexOf(selectedPiece);
 
             updated[selectedIndex].rank = newRank;
             updated[selectedIndex].file = newFile;
@@ -160,9 +163,7 @@ const App = () => {
                         return (
                             <VisualPiece
                                 piece={() => pieces()[i()]}
-                                selectedPiece={() =>
-                                    selected() ? pieces()[selected()!] : null
-                                }
+                                selectedPiece={selected}
                                 onclick={() => handlePieceClicked(i())}
                             />
                         );
@@ -180,6 +181,13 @@ interface ButtonProps {
 }
 
 const Board = (props: ButtonProps) => {
+    function getPosition(i: number): { top: string; left: string } {
+        return {
+            top: (rank(i) * 80).toString() + "px",
+            left: (file(i) * 80).toString() + "px",
+        };
+    }
+
     return (
         <div class={twMerge("w-[40rem] h-[40rem] relative", props.class)}>
             <For each={Array.from({ length: 64 }, () => 0)}>
@@ -190,10 +198,7 @@ const Board = (props: ButtonProps) => {
                         <Square
                             color={color}
                             onclick={() => props.onclick(i())}
-                            style={{
-                                top: (rank(i()) * 80).toString() + "px",
-                                left: (file(i()) * 80).toString() + "px",
-                            }}
+                            style={getPosition(i())}
                         />
                     );
                 }}
