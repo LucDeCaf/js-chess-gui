@@ -27,23 +27,39 @@ enum Color {
     BLACK,
 }
 
+enum Rank {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+}
+
 type Piece = {
     kind: Kind;
     color: Color;
+    rank: number;
+    file: number;
 };
 
-function initialisePieces(): (Piece | null)[] {
-    const board = [];
+function seedPieces(): Piece[] {
+    const board: Piece[] = [];
     for (let i = 0; i < 64; i++) {
-        board.push({ kind: Kind.PAWN, color: Color.WHITE });
+        board.push({
+            kind: Kind.PAWN,
+            color: Color.WHITE,
+            rank: 0,
+            file: 0,
+        });
     }
     return board;
 }
 
 const App = () => {
-    const [pieces, _setPieces] = createSignal<(Piece | null)[]>(
-        initialisePieces()
-    );
+    const [pieces, _setPieces] = createSignal<Piece[]>(seedPieces());
     // const [selected, setSelected] = createSignal<number | null>(null);
 
     return (
@@ -53,9 +69,7 @@ const App = () => {
                 <div class="top-0 left-0 absolute grid grid-cols-8 gap-0 w-max h-max rounded-lg overflow-hidden">
                     <For each={pieces()}>
                         {(piece, _i) => {
-                            if (piece) {
-                                return <VisualPiece piece={piece} />;
-                            }
+                            return <VisualPiece piece={piece} />;
                         }}
                     </For>
                 </div>
