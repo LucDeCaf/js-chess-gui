@@ -47,28 +47,34 @@ const App = () => {
     // const [selected, setSelected] = createSignal<number | null>(null);
 
     return (
-        <div class="w-full p-12 flex justify-center">
-            {/* Board */}
-            <div class="grid grid-cols-8 gap-0 w-max h-max rounded-lg overflow-hidden">
-                <For each={Array.from({ length: 64 }, () => 0)}>
-                    {(_, i) => {
-                        let offset = Math.floor(i() / 8) % 2 == 0 ? 0 : 1;
-                        return (
-                            <Square
-                                color={
-                                    (i() + offset) % 2 == 0 ? "light" : "dark"
-                                }
-                            />
-                        );
-                    }}
-                </For>
+        <main class="w-full p-12 flex justify-center">
+            <div class="relative w-full">
+                <Board class="absolute" />
+                <div class="top-0 left-0 absolute grid grid-cols-8 gap-0 w-max h-max rounded-lg overflow-hidden">
+                    <For each={pieces()}>
+                        {(piece, _i) => {
+                            if (piece) {
+                                return <VisualPiece piece={piece} />;
+                            }
+                        }}
+                    </For>
+                </div>
             </div>
-            {/* Pieces */}
-            <For each={pieces()}>
-                {(piece, _i) => {
-                    if (piece) {
-                        return <VisualPiece piece={piece} />;
-                    }
+        </main>
+    );
+};
+
+const Board = (props: { class: string }) => {
+    return (
+        <div class={props.class}>
+            <For each={Array.from({ length: 64 }, () => 0)}>
+                {(_, i) => {
+                    let offset = Math.floor(i() / 8) % 2 == 0 ? 0 : 1;
+                    return (
+                        <Square
+                            color={(i() + offset) % 2 == 0 ? "light" : "dark"}
+                        />
+                    );
                 }}
             </For>
         </div>
@@ -102,9 +108,9 @@ const VisualPiece = (props: PieceProps) => {
     }
 
     return (
-        <div class="w-40 aspect-square absolute">
-            <img src={imagePath} alt="piece" />
-        </div>
+        <button class="w-20 bg-slate-200 aspect-square absolute top-0 left-0">
+            <img src={imagePath} alt="piece" width="80px" />
+        </button>
     );
 };
 
@@ -128,17 +134,17 @@ function getPieceImage(piece: Piece): string | null {
         case Kind.ROOK:
             return piece.color === Color.WHITE
                 ? whiteRookImage
-                : blackBishopImage;
+                : blackRookImage;
             break;
         case Kind.QUEEN:
             return piece.color === Color.WHITE
                 ? whiteQueenImage
-                : blackBishopImage;
+                : blackQueenImage;
             break;
         case Kind.KING:
             return piece.color === Color.WHITE
                 ? whiteKingImage
-                : blackBishopImage;
+                : blackKingImage;
             break;
 
         default:
