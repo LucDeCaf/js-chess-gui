@@ -1,6 +1,6 @@
 import { VariantProps, cva } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
-import { For, type JSX, createSignal } from "solid-js";
+import { For, type JSX, createSignal, createEffect, Accessor } from "solid-js";
 import whitePawnImage from "./assets/pieces/wP.svg";
 import whiteKnightImage from "./assets/pieces/wP.svg";
 import whiteBishopImage from "./assets/pieces/wP.svg";
@@ -57,21 +57,91 @@ function seedPieces(): Piece[] {
 }
 
 const App = () => {
-    const [pieces, _setPieces] = createSignal<Piece[]>(seedPieces());
-    // const [selected, setSelected] = createSignal<number | null>(null);
+    const [pieces, setPieces] = createSignal<Piece[]>(seedPieces());
+    const [selected, setSelected] = createSignal<number | null>(null);
+    const [currentTurn, setCurrentTurn] = createSignal<Color>(Color.WHITE);
 
-    function handlePieceClick() {}
+    function handlePieceClicked(clickedIndex: number) {
+        console.log("piece clicked");
+        const selectedIndex = selected();
+
+        // Handle clicking piece for the first time
+        if (!selectedIndex) {
+            if (pieces()[clickedIndex].color === currentTurn()) {
+                setSelected(clickedIndex);
+            }
+            return;
+        }
+
+        // Handle deselecting pieces
+        if (selectedIndex === clickedIndex) {
+            setSelected(null);
+            return;
+        }
+
+        // Handle clicking on a piece with another piece selected
+        if (selectedIndex) {
+            // Prevent capturing your own piece - instead select it
+            if (pieces()[clickedIndex].color === currentTurn()) {
+                setSelected(clickedIndex);
+                return;
+            }
+
+            // Move piece and capture enemy piece
+            setPieces((prev) => {
+                const newPieces = [...prev];
+
+                const movedPiece = newPieces[selectedIndex];
+                const capturedPiece = newPieces[clickedIndex];
+
+                movedPiece.rank = capturedPiece.rank;
+                movedPiece.file = capturedPiece.file;
+
+                newPieces.splice(newPieces.indexOf(capturedPiece), 1);
+
+                return newPieces;
+            });
+
+            setSelected(null);
+
+            setCurrentTurn(
+                currentTurn() === Color.WHITE ? Color.BLACK : Color.WHITE
+            );
+        }
+    }
+
+    function handleSquareClicked(index: number) {
+        const selectedIndex = selected();
+
+        if (!selectedIndex) {
+            return;
+        }
+
+        const newRank = rank(index);
+        const newFile = file(index);
+
+        setPieces((prev) => {
+            const updated = [...prev];
+
+            updated[selectedIndex].rank = newRank;
+            updated[selectedIndex].file = newFile;
+
+            return updated;
+        });
+
+        setSelected(null);
+    }
 
     return (
         <main class="w-full min-h-screen p-12 flex justify-center">
             <div class="relative w-[40rem] h-[40rem] flex justify-center">
-                <Board class="absolute" />
+                <Board class="absolute" onclick={handleSquareClicked} />
                 <For each={pieces()}>
-                    {(piece, _i) => {
+                    {(_piece, i) => {
                         return (
                             <VisualPiece
-                                piece={piece}
-                                onclick={handlePieceClick}
+                                piece={() => pieces()[i()]}
+                                onclick={() => handlePieceClicked(i())}
                             />
                         );
                     }}
@@ -81,20 +151,30 @@ const App = () => {
     );
 };
 
-const Board = (props: { class: string }) => {
+interface ButtonProps {
+    class: string;
+    onclick: (index: number) => any;
+}
+
+const Board = (props: ButtonProps) => {
     return (
         <div
             class={twMerge(
-                ["grid grid-cols-8 w-max overflow-hidden rounded-lg"],
+                "w-[40rem] h-[40rem] relative overflow-hidden rounded-lg",
                 props.class
             )}
         >
             <For each={Array.from({ length: 64 }, () => 0)}>
                 {(_, i) => {
-                    let offset = Math.floor(i() / 8) % 2 == 0 ? 0 : 1;
+                    const offset = Math.floor(i() / 8) % 2 === 0 ? 1 : 0;
                     return (
                         <Square
-                            color={(i() + offset) % 2 == 0 ? "light" : "dark"}
+                            color={(i() + offset) % 2 === 0 ? "light" : "dark"}
+                            onclick={() => props.onclick(i())}
+                            style={{
+                                top: (rank(i()) * 80).toString() + "px",
+                                left: (file(i()) * 80).toString() + "px",
+                            }}
                         />
                     );
                 }}
@@ -103,41 +183,53 @@ const Board = (props: { class: string }) => {
     );
 };
 
-const square = cva(["aspect-square", "w-20"], {
-    variants: {
-        color: {
-            light: ["bg-orange-300"],
-            dark: ["bg-amber-800"],
+const square = cva(
+    ["aspect-square", "w-20", "cursor-default", "m-0", "p-0", "absolute"],
+    {
+        variants: {
+            color: {
+                light: ["bg-orange-300"],
+                dark: ["bg-amber-800"],
+            },
         },
-    },
-});
+    }
+);
 
-interface SquareProps extends VariantProps<typeof square> {}
+interface SquareProps extends VariantProps<typeof square> {
+    onclick: () => any;
+    style: JSX.HTMLAttributes<HTMLButtonElement>["style"] | undefined;
+}
 
 const Square = (props: SquareProps) => {
-    return <div class={square({ color: props.color })}></div>;
+    return (
+        <button
+            class={square({ color: props.color })}
+            onclick={props.onclick}
+            style={props.style}
+        />
+    );
 };
 
 interface PieceProps {
-    piece: Piece;
-    onclick: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent>;
+    piece: Accessor<Piece>;
+    onclick: () => any;
 }
 
 const VisualPiece = (props: PieceProps) => {
-    const imagePath = getPieceImage(props.piece);
+    const imagePath = getPieceImage(props.piece());
 
     if (!imagePath) {
-        throw new Error(`failed to find image for piece ${props.piece}`);
+        throw new Error(`failed to find image for piece ${props.piece()}`);
     }
 
     return (
         <button
-            class="w-20 z-30 aspect-square absolute"
+            class="w-20 h-20 z-30 absolute"
             style={{
-                top: (props.piece.rank * 80).toString() + "px",
-                left: (props.piece.file * 80).toString() + "px",
+                top: (props.piece().rank * 80).toString() + "px",
+                left: (props.piece().file * 80).toString() + "px",
             }}
-            onclick={self.onclick ? self.onclick : undefined}
+            onclick={() => props.onclick()}
         >
             <img src={imagePath} alt="piece" width="80px" />
         </button>
