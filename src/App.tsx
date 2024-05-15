@@ -1,6 +1,6 @@
 import { VariantProps, cva } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
-import { For, type JSX, createSignal, createEffect, Accessor } from "solid-js";
+import { For, type JSX, createSignal, Accessor, createEffect } from "solid-js";
 import whitePawnImage from "./assets/pieces/wP.svg";
 import whiteKnightImage from "./assets/pieces/wP.svg";
 import whiteBishopImage from "./assets/pieces/wP.svg";
@@ -60,6 +60,18 @@ const App = () => {
     const [pieces, setPieces] = createSignal<Piece[]>(seedPieces());
     const [selected, setSelected] = createSignal<number | null>(null);
     const [currentTurn, setCurrentTurn] = createSignal<Color>(Color.WHITE);
+    const [highlight, setHighlight] = createSignal<number[]>([]);
+
+    createEffect(() => {
+        const selectedIndex = selected();
+
+        const newHighlight: number[] = [];
+        if (selectedIndex) {
+            newHighlight.push(selectedIndex);
+        }
+
+        setHighlight(newHighlight);
+    });
 
     function handlePieceClicked(clickedIndex: number) {
         console.log("piece clicked");
@@ -135,12 +147,22 @@ const App = () => {
     return (
         <main class="w-full min-h-screen p-12 flex justify-center">
             <div class="relative w-[40rem] h-[40rem] flex justify-center">
-                <Board class="absolute" onclick={handleSquareClicked} />
+                {/* Board */}
+                <Board
+                    class="absolute"
+                    onclick={handleSquareClicked}
+                    highlight={highlight}
+                />
+
+                {/* Pieces */}
                 <For each={pieces()}>
                     {(_piece, i) => {
                         return (
                             <VisualPiece
                                 piece={() => pieces()[i()]}
+                                selectedPiece={() =>
+                                    selected() ? pieces()[selected()!] : null
+                                }
                                 onclick={() => handlePieceClicked(i())}
                             />
                         );
@@ -154,22 +176,19 @@ const App = () => {
 interface ButtonProps {
     class: string;
     onclick: (index: number) => any;
+    highlight: Accessor<number[]>;
 }
 
 const Board = (props: ButtonProps) => {
     return (
-        <div
-            class={twMerge(
-                "w-[40rem] h-[40rem] relative overflow-hidden rounded-lg",
-                props.class
-            )}
-        >
+        <div class={twMerge("w-[40rem] h-[40rem] relative", props.class)}>
             <For each={Array.from({ length: 64 }, () => 0)}>
                 {(_, i) => {
                     const offset = Math.floor(i() / 8) % 2 === 0 ? 1 : 0;
+                    const color = (i() + offset) % 2 === 0 ? "light" : "dark";
                     return (
                         <Square
-                            color={(i() + offset) % 2 === 0 ? "light" : "dark"}
+                            color={color}
                             onclick={() => props.onclick(i())}
                             style={{
                                 top: (rank(i()) * 80).toString() + "px",
@@ -212,6 +231,7 @@ const Square = (props: SquareProps) => {
 
 interface PieceProps {
     piece: Accessor<Piece>;
+    selectedPiece: Accessor<Piece | null>;
     onclick: () => any;
 }
 
@@ -224,7 +244,12 @@ const VisualPiece = (props: PieceProps) => {
 
     return (
         <button
-            class="w-20 h-20 z-30 absolute"
+            class={
+                "w-20 h-20 z-30 absolute " +
+                (props.piece() === props.selectedPiece()
+                    ? "bg-yellow-500 bg-opacity-80"
+                    : "")
+            }
             style={{
                 top: (props.piece().rank * 80).toString() + "px",
                 left: (props.piece().file * 80).toString() + "px",
