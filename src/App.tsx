@@ -1,6 +1,6 @@
 import { VariantProps, cva } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
-import { For, createSignal } from "solid-js";
+import { For, type JSX, createSignal } from "solid-js";
 import whitePawnImage from "./assets/pieces/wP.svg";
 import whiteKnightImage from "./assets/pieces/wP.svg";
 import whiteBishopImage from "./assets/pieces/wP.svg";
@@ -35,14 +35,22 @@ type Piece = {
     file: number;
 };
 
+function rank(index: number): number {
+    return 7 - Math.floor(index / 8);
+}
+
+function file(index: number): number {
+    return index % 8;
+}
+
 function seedPieces(): Piece[] {
     const board: Piece[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 10; i++) {
         board.push({
             kind: Kind.PAWN,
             color: Color.WHITE,
-            rank: 0,
-            file: 0,
+            rank: rank(i),
+            file: file(i),
         });
     }
     return board;
@@ -52,13 +60,20 @@ const App = () => {
     const [pieces, _setPieces] = createSignal<Piece[]>(seedPieces());
     // const [selected, setSelected] = createSignal<number | null>(null);
 
+    function handlePieceClick() {}
+
     return (
-        <main class="w-full p-12 flex justify-center">
-            <div class="relative">
+        <main class="w-full min-h-screen p-12 flex justify-center">
+            <div class="relative w-[40rem] h-[40rem] flex justify-center">
                 <Board class="absolute" />
                 <For each={pieces()}>
                     {(piece, _i) => {
-                        return <VisualPiece piece={piece} />;
+                        return (
+                            <VisualPiece
+                                piece={piece}
+                                onclick={handlePieceClick}
+                            />
+                        );
                     }}
                 </For>
             </div>
@@ -105,6 +120,7 @@ const Square = (props: SquareProps) => {
 
 interface PieceProps {
     piece: Piece;
+    onclick: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent>;
 }
 
 const VisualPiece = (props: PieceProps) => {
@@ -116,11 +132,12 @@ const VisualPiece = (props: PieceProps) => {
 
     return (
         <button
-            class="w-20 z-30 bg-slate-200 aspect-square absolute"
+            class="w-20 z-30 aspect-square absolute"
             style={{
                 top: (props.piece.rank * 80).toString() + "px",
                 left: (props.piece.file * 80).toString() + "px",
             }}
+            onclick={self.onclick ? self.onclick : undefined}
         >
             <img src={imagePath} alt="piece" width="80px" />
         </button>
